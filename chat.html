@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+    <style>
+        #chat-box { height: 300px; overflow-y: scroll; border: 1px solid black; padding: 10px; }
+        #message-input { width: 80%; }
+        #send-button { width: 15%; }
+    </style>
+    <script>
+        function getCSRFToken() {
+            return document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
+        }
+
+        async function fetchMessages() {
+            let response = await fetch("/chat/messages/");
+            let data = await response.json();
+            let chatBox = document.getElementById("chat-box");
+            chatBox.innerHTML = data.messages.map(msg => `<p><strong>${msg.name}:</strong> ${msg.message}</p>`).join("");
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        async function sendMessage(event) {
+            event.preventDefault();
+            let name = document.getElementById("name").value;
+            let message = document.getElementById("message").value;
+            let csrfToken = getCSRFToken();
+
+            let response = await fetch("/chat/send/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": csrfToken
+                },
+                body: JSON.stringify({ name: name, message: message })
+            });
+
+            if (response.ok) {
+                document.getElementById("message").value = "";
+                fetchMessages();
+            } else {
+                alert("Failed to send message");
+            }
+        }
+
+        setInterval(fetchMessages, 1000);
+        window.onload = fetchMessages;
+    </script>
+</head>
+<body>
+    <h1>Chat App</h1>
+    <div id="chat-box"></div>
+    <form id="chat-form" onsubmit="sendMessage(event)">
+        <input type="text" id="name" placeholder="Your name" required>
+        <input type="text" id="message" placeholder="Type a message" required>
+        <button type="submit" id="send-button">Send</button>
+    </form>
+</body>
+</html>
